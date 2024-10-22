@@ -43,17 +43,28 @@ class Client implements ClientInterface
      * @var ClientBuilder
      */
     private $clientBuilder;
+    
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * Constructor.
      *
      * @param ClientConfigurationInterface $clientConfiguration Client configuration factory.
      * @param ClientBuilder                $clientBuilder       ES client builder.
+     * @param \Psr\Log\LoggerInterface     $logger              Logger.
      */
-    public function __construct(ClientConfigurationInterface $clientConfiguration, ClientBuilder $clientBuilder)
+    public function __construct(
+        ClientConfigurationInterface $clientConfiguration,
+        ClientBuilder $clientBuilder,
+        \Psr\Log\LoggerInterface $logger
+    )
     {
         $this->clientConfiguration = $clientConfiguration;
         $this->clientBuilder = $clientBuilder;
+        $this->logger = $logger;
     }
 
     /**
@@ -101,7 +112,15 @@ class Client implements ClientInterface
      */
     public function deleteIndex($indexName)
     {
-        $this->getEsClient()->indices()->delete(['index' => $indexName]);
+        /**
+         * This just avoids index deletion issues (eg due to Amazon ES snapshotting)
+         **/
+        try {
+            $this->getEsClient()->indices()->delete(['index' => $indexName]);
+        } catch (\Exception $ex) {
+            $this->logger->critical("Elasticsearch Index {$indexName} could not be deleted: {$ex->getMessage()}");
+        }
+       
     }
 
     /**
