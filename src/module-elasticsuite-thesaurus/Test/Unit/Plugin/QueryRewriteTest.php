@@ -28,6 +28,8 @@ use Smile\ElasticsuiteCore\Index\Mapping\Field;
 use Smile\ElasticsuiteCore\Search\Request\Query\Builder;
 use Smile\ElasticsuiteCore\Search\Request\Query\QueryFactory;
 use Smile\ElasticsuiteCore\Search\Request\QueryInterface;
+use Smile\ElasticsuiteThesaurus\Config\ThesaurusConfig;
+use Smile\ElasticsuiteThesaurus\Config\ThesaurusConfigFactory;
 use Smile\ElasticsuiteThesaurus\Model\Index as ThesaurusIndex;
 use Smile\ElasticsuiteThesaurus\Plugin\QueryRewrite;
 use Smile\ElasticsuiteThesaurus\Test\Unit\FulltextQueryBuilderInterceptor;
@@ -88,12 +90,15 @@ class QueryRewriteTest extends \PHPUnit\Framework\TestCase
         $queryFactory = $this->getQueryFactory($this->mockedQueryTypes);
         $containerConfig = $this->getContainerConfigMock($this->fields);
         $spellingType = SpellcheckerInterface::SPELLING_TYPE_EXACT;
+        $maxRewrittenQueries = 0;
+
+        $thesaurusConfigFactory = $this->getThesaurusConfigFactoryMock($maxRewrittenQueries);
 
         $thesaurusIndex = $this->getMockBuilder(ThesaurusIndex::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $queryRewritePlugin = new QueryRewrite($queryFactory, $thesaurusIndex);
+        $queryRewritePlugin = new QueryRewrite($queryFactory, $thesaurusConfigFactory, $thesaurusIndex);
         $queryBuilderInterceptor = $this->getQueryBuilderWithPlugin($queryFactory, $queryRewritePlugin);
 
         /*
@@ -129,12 +134,15 @@ class QueryRewriteTest extends \PHPUnit\Framework\TestCase
         $queryFactory = $this->getQueryFactory($this->mockedQueryTypes);
         $containerConfig = $this->getContainerConfigMock($this->fields);
         $spellingType = SpellcheckerInterface::SPELLING_TYPE_EXACT;
+        $maxRewrittenQueries = 0;
+
+        $thesaurusConfigFactory = $this->getThesaurusConfigFactoryMock($maxRewrittenQueries);
 
         $thesaurusIndex = $this->getMockBuilder(ThesaurusIndex::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $queryRewritePlugin = new QueryRewrite($queryFactory, $thesaurusIndex);
+        $queryRewritePlugin = new QueryRewrite($queryFactory, $thesaurusConfigFactory, $thesaurusIndex);
         $queryBuilderInterceptor = $this->getQueryBuilderWithPlugin($queryFactory, $queryRewritePlugin);
 
         $thesaurusIndex->expects($this->exactly(2))->method('getQueryRewrites')->withConsecutive(
@@ -149,6 +157,76 @@ class QueryRewriteTest extends \PHPUnit\Framework\TestCase
 
         $query = $queryBuilderInterceptor->create($containerConfig, ['foo', 'bar'], $spellingType);
         $this->assertEquals(QueryInterface::TYPE_BOOL, $query->getType());
+    }
+
+    /**
+     * Test running the query builder using a single search expression and application of rewrites limitation
+     * per search term  while the thesaurus index provides all rewrites.
+     *
+     * @return void
+     */
+    public function testSingleSearchQueryLimitedRewrites()
+    {
+        $queryFactory = $this->getQueryFactory($this->mockedQueryTypes);
+        $queryFactoryFullMock = $this->getMockBuilder(QueryFactory::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $containerConfig = $this->getContainerConfigMock($this->fields);
+        $spellingType = SpellcheckerInterface::SPELLING_TYPE_EXACT;
+        $maxRewrittenQueries = 1;
+
+        $thesaurusConfigFactory = $this->getThesaurusConfigFactoryMock($maxRewrittenQueries);
+
+        $thesaurusIndex = $this->getMockBuilder(ThesaurusIndex::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        // Passing the mock Query Factory to the plugin to count the occurence of calls to 'create'.
+        $queryRewritePlugin = new QueryRewrite($queryFactoryFullMock, $thesaurusConfigFactory, $thesaurusIndex);
+        // But passing the real Query Factory (with mocked factories) to the query builder itself.
+        $queryBuilderInterceptor = $this->getQueryBuilderWithPlugin($queryFactory, $queryRewritePlugin);
+
+        $thesaurusIndex->expects($this->exactly(1))->method('getQueryRewrites')->withConsecutive(
+            [$containerConfig, 'foo', 1]
+        )->willReturnMap(
+            [
+                [$containerConfig, 'foo', 1, ['foo bar' => 0.1, 'foo light' => 0.1, 'moo' => 0.1, 'moo bar' => 0.01]],
+            ]
+        );
+
+        $queryFactoryFullMock->expects($this->exactly(1))->method('create')->with(
+            $this->equalTo(QueryInterface::TYPE_BOOL),
+            $this->callback(
+                function ($createArguments) use ($maxRewrittenQueries) {
+                    if (!is_array($createArguments)
+                        || count($createArguments) > 1
+                        || !array_key_exists('should', $createArguments)
+                        || !is_array($createArguments['should'])
+                    ) {
+                        return false;
+                    }
+                    $queries = $createArguments['should'];
+                    // The initial query needs to be counted.
+                    if (count($queries) > (1 + $maxRewrittenQueries)) {
+                        return false;
+                    }
+                    foreach ($queries as $query) {
+                        if (false == ($query instanceof QueryInterface)) {
+                            return false;
+                        }
+                        /** @var QueryInterface $query */
+                        if ($query->getType() !== QueryInterface::TYPE_FILTER) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            )
+        );
+
+        /** @var \Smile\ElasticsuiteCore\Search\Request\Query\Boolean $query */
+        $query = $queryBuilderInterceptor->create($containerConfig, 'foo', $spellingType);
     }
 
     /**
@@ -217,6 +295,28 @@ class QueryRewriteTest extends \PHPUnit\Framework\TestCase
         }
 
         return new QueryFactory($factories);
+    }
+
+    /**
+     * Mock the thesaurus config factory.
+     *
+     * @param int $maxRewrittenQueries Max Rewritten Queries.
+     *
+     * @return \PHPUnit\Framework\MockObject\MockObject
+     */
+    private function getThesaurusConfigFactoryMock($maxRewrittenQueries)
+    {
+        $thesaurusConfig = $this->getMockBuilder(ThesaurusConfig::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $thesaurusConfig->method('getMaxRewrittenQueries')->will($this->returnValue($maxRewrittenQueries));
+
+        $thesaurusConfigFactory = $this->getMockBuilder(ThesaurusConfigFactory::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $thesaurusConfigFactory->method('create')->will($this->returnValue($thesaurusConfig));
+
+        return $thesaurusConfigFactory;
     }
 
     /**
