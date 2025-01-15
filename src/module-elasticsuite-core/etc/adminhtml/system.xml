@@ -206,7 +206,7 @@
                 </field>
                 <field id="extension_size" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>The number of suggested popular search terms to use for fetching results.</label>
-                    <validate>integer</validate>
+                    <validate>integer validate-greater-than-zero</validate>
                     <depends>
                         <field id="extension_enabled">1</field>
                         <field id="extension_limit">1</field>
