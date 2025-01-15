@@ -196,7 +196,7 @@
                     </depends>
                     <comment><![CDATA[Default: No. When set to "Yes", this setting will always proceed to fetch suggestions on the query typed by the user in addition to the extended terms. Eg : When the user is typing "comp", the popular search term "computer" will be suggested, but products or categories matching either "comp" or "computer" will be shown.]]></comment>
                 </field>
-                <field id="extension_limit" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="extension_limited" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Limit the amount of suggested search terms used for autocomplete matching</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <depends>
@@ -209,7 +209,7 @@
                     <validate>integer validate-greater-than-zero</validate>
                     <depends>
                         <field id="extension_enabled">1</field>
-                        <field id="extension_limit">1</field>
+                        <field id="extension_limited">1</field>
                     </depends>
                     <comment><![CDATA[The number of suggested search terms that will be used for fetching results in the autocompletion box.]]></comment>
                 </field>
