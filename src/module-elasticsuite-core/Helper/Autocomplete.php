@@ -71,10 +71,10 @@ class Autocomplete extends AbstractConfiguration
      */
     public function isExtensionLimited()
     {
-        return (bool) $this->scopeConfig->isSetFlag(
+        return (bool) ($this->scopeConfig->isSetFlag(
             self::AUTOCOMPLETE_SETTINGS_CONFIG_XML_PREFIX . "/advanced/extension_limited",
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
+        )) && ($this->getExtensionSize() > 0);
     }
 
     /**
