@@ -20,6 +20,7 @@
         <arguments>
             <argument name="aggregationProviders" xsi:type="array">
                 <item name="data" xsi:type="object">Smile\ElasticsuiteAnalytics\Model\Search\Usage\Kpi\AggregationProvider</item>
+                <item name="details" xsi:type="object">Smile\ElasticsuiteAnalytics\Model\Search\Usage\Kpi\DetailsAggregationProvider</item>
             </argument>
             <argument name="queryProviders" xsi:type="array">
                 <item name="dateFilter" xsi:type="object">Smile\ElasticsuiteAnalytics\Model\Report\Event\DateFilterQueryProvider</item>

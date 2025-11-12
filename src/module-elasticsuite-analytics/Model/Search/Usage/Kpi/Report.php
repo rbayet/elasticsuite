@@ -14,6 +14,7 @@
 namespace Smile\ElasticsuiteAnalytics\Model\Search\Usage\Kpi;
 
 use Smile\ElasticsuiteAnalytics\Model\AbstractReport;
+use Smile\ElasticsuiteCore\Search\Adapter\Elasticsuite\Response\QueryResponse;
 
 /**
  * Search usage KPI Report
@@ -54,12 +55,16 @@ class Report extends AbstractReport
                 $data['sessions_count'] = (int) $value->getMetrics()['unique_sessions'];
                 $data['visitors_count'] = (int) $value->getMetrics()['unique_visitors'];
             } elseif ($value->getValue() == 'searches') {
-                $data['search_page_views_count'] = (int) $value->getMetrics()['count'];
-                $data['search_sessions_count']   = (int) $value->getMetrics()['unique_sessions'];
-                $data['search_usage_rate']       = round($data['search_page_views_count'] / ($data['search_sessions_count'] ?: 1), 1);
-                $data['spellcheck_usage_count']  = (int) $value->getMetrics()['spellcheck_usage']['sum'];
-                $data['spellcheck_usage_rate']   = $value->getMetrics()['spellcheck_usage']['avg'];
-            } elseif (in_array($value->getValue(), ['product_views', 'category_views', 'add_to_cart', 'sales'])) {
+                $data['search_page_views_count'] = (int)$value->getMetrics()['count'];
+                $data['search_sessions_count'] = (int)$value->getMetrics()['unique_sessions'];
+                $data['search_usage_rate'] = round($data['search_page_views_count'] / ($data['search_sessions_count'] ?: 1), 1);
+                $data['spellcheck_usage_count'] = (int)$value->getMetrics()['spellcheck_usage']['sum'];
+                $data['spellcheck_usage_rate'] = $value->getMetrics()['spellcheck_usage']['avg'];
+            }
+        }
+
+        foreach ($this->getBucketValues($response, 'details') as $value) {
+            if (in_array($value->getValue(), ['product_views', 'category_views', 'add_to_cart', 'sales'])) {
                 $key = sprintf("%s_count", $value->getValue());
                 $data[$key] = (int) $value->getMetrics()['count'];
             }
@@ -69,15 +74,16 @@ class Report extends AbstractReport
     }
 
     /**
-     * Return the bucket values from the main aggregation
+     * Return the bucket values from an aggregation.
      *
-     * @param \Smile\ElasticsuiteCore\Search\Adapter\Elasticsuite\Response\QueryResponse $response ES Query response.
+     * @param QueryResponse $response   ES Query response.
+     * @param string        $bucketName Bucket name.
      *
      * @return \Magento\Framework\Api\Search\AggregationValueInterface[]
      */
-    private function getBucketValues(\Smile\ElasticsuiteCore\Search\Adapter\Elasticsuite\Response\QueryResponse $response)
+    private function getBucketValues(QueryResponse $response, $bucketName = 'data')
     {
-         $bucket = $response->getAggregations()->getBucket('data');
+         $bucket = $response->getAggregations()->getBucket($bucketName);
 
          return $bucket !== null ? $bucket->getValues() : [];
     }
