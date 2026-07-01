@@ -68,3 +68,5 @@
 "Total of %1 thesaurus were disabled.","Insgesamt wurden %1 Thesaurus deaktiviert."
 "Please select thesaurus to enable.","Bitte wählen Sie Thesaurus zum Aktivieren."
 "Total of %1 thesaurus were enabled.","Insgesamt wurden %1 Thesaurus aktiviert."
+"Cache TTL","Cache TTL"
+"Cache lifetime in seconds, between 300 (5 minutes) and 2592000 (30 days). Defaults to 7200 (2 hours).","Cache-Lebensdauer in Sekunden, zwischen 300 (5 Minuten) und 2592000 (30 Tage). Standardwert: 7200 (2 Stunden)."

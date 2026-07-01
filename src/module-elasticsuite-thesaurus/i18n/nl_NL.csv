@@ -68,3 +68,5 @@
 "Total of %1 thesaurus were disabled.","Totaal van %1 thesaurus was uitgeschakeld."
 "Please select thesaurus to enable.","Selecteer thesaurus om in te schakelen."
 "Total of %1 thesaurus were enabled.","Totaal van %1 thesaurus zijn ingeschakeld."
+"Cache TTL","Cache TTL"
+"Cache lifetime in seconds, between 300 (5 minutes) and 2592000 (30 days). Defaults to 7200 (2 hours).","Cache-levensduur in seconden, tussen 300 (5 minuten) en 2592000 (30 dagen). Standaard: 7200 (2 uur)."
